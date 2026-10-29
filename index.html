@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-C3 Smartwatch Control Panel</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #fde047;
+            --accent-hover: #facc15;
+            --danger-color: #ef4444;
+            --danger-hover: #dc2626;
+            --success-color: #4ade80;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 25px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+        }
+        .card h3 {
+            margin-top: 0;
+            font-size: 16px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 8px;
+            color: #cbd5e1;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: #000;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background-color: var(--danger-hover);
+        }
+        .btn-success {
+            background-color: var(--success-color);
+            color: #000;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 8px 0 15px 0;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background-color: #0f172a;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        label {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        #status {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 8px;
+            background-color: #0f172a;
+            font-size: 14px;
+            color: #f87171;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+        }
+        .connected {
+            color: var(--success-color) !important;
+            border-color: #166534 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Smartwatch Control</h2>
+        <div class="subtitle">ESP32-C3 Web Bluetooth Dashboard</div>
+
+        <!-- Trạng thái kết nối -->
+        <div class="card">
+            <div id="status">Trạng thái: Chưa kết nối</div>
+            <button id="connectBtn" class="btn-primary" onclick="connectBLE()">Quét & Kết nối BLE</button>
+        </div>
+
+        <!-- Điều khiển nhanh -->
+        <div class="card">
+            <h3>Điều khiển thiết bị</h3>
+            <button class="btn-primary" onclick="sendBLECommand('SLEEP_ON')">Bật chế độ Ngủ (Sleep Mode)</button>
+            <button class="btn-danger" onclick="sendBLECommand('SLEEP_OFF')">Thức dậy (Wake Up)</button>
+        </div>
+
+        <!-- Cấu hình Wi-Fi -->
+        <div class="card">
+            <h3>Cấu hình Wi-Fi</h3>
+            <label for="ssid">Tên Wi-Fi (SSID):</label>
+            <input type="text" id="ssid" placeholder="Nhập tên Wi-Fi nhà bạn">
+            
+            <label for="pass">Mật khẩu Wi-Fi:</label>
+            <input type="password" id="pass" placeholder="Nhập mật khẩu Wi-Fi">
+            
+            <button class="btn-success" onclick="sendWiFiConfig()">Cập nhật Wi-Fi qua BLE</button>
+        </div>
+    </div>
+
+<script>
+    // UUID cố định trùng khớp với code BLE phía ESP32-C3
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
+    let bluetoothDevice;
+    let bleCharacteristic;
+
+    async function connectBLE() {
+        try {
+            updateStatus("Đang quét thiết bị ESP32...", false);
+            
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: "ESP32_Watch" }],
+                optionalServices: [SERVICE_UUID]
+            });
+
+            bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+            updateStatus("Đang kết nối GATT...", false);
+            const server = await bluetoothDevice.gatt.connect();
+
+            updateStatus("Đang tìm dịch vụ BLE...", false);
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+            updateStatus("Đã kết nối thành công!", true);
+            document.getElementById("connectBtn").innerText = "Đã kết nối";
+            document.getElementById("connectBtn").style.backgroundColor = "#334155";
+            document.getElementById("connectBtn").style.color = "#94a3b8";
+
+        } catch (error) {
+            console.error("Lỗi kết nối:", error);
+            updateStatus("Kết nối thất bại / Hủy chọn", false);
+        }
+    }
+
+    function onDisconnected() {
+        updateStatus("Đồng hồ đã ngắt kết nối!", false);
+        document.getElementById("connectBtn").innerText = "Quét & Kết nối BLE";
+        document.getElementById("connectBtn").style.backgroundColor = "";
+        document.getElementById("connectBtn").style.color = "";
+        bleCharacteristic = null;
+    }
+
+    async function sendBLECommand(cmd) {
+        if (!bleCharacteristic) {
+            alert("Vui lòng kết nối Bluetooth với đồng hồ trước!");
+            return;
+        }
+        try {
+            const encoder = new TextEncoder();
+            await bleCharacteristic.writeValue(encoder.encode(cmd));
+            console.log("Đã gửi lệnh:", cmd);
+        } catch (error) {
+            console.error("Lỗi gửi lệnh:", error);
+            alert("Gửi lệnh thất bại!");
+        }
+    }
+
+    async function sendWiFiConfig() {
+        const ssid = document.getElementById("ssid").value;
+        const pass = document.getElementById("pass").value;
+        if (!ssid) {
+            alert("Vui lòng nhập tên Wi-Fi!");
+            return;
+        }
+        const configStr = `WIFI:${ssid},${pass}`;
+        await sendBLECommand(configStr);
+        alert("Đã truyền cấu hình Wi-Fi xuống đồng hồ!");
+    }
+
+    function updateStatus(msg, isConnected) {
+        const statusEl = document.getElementById("status");
+        statusEl.innerText = "Trạng thái: " + msg;
+        if (isConnected) {
+            statusEl.classList.add("connected");
+        } else {
+            statusEl.classList.remove("connected");
+        }
+    }
+</script>
+
+</body>
+</html>
