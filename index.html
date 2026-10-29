@@ -157,26 +157,20 @@
             <button class="btn-yellow" onclick="syncTime()">Đồng bộ thời gian hiện tại (Sync Time)</button>
             <button class="btn-primary" onclick="syncWeather()">Làm mới thời tiết (Sync Weather)</button>
             
-            <label for="citySelect" style="margin-top: 10px; display:block;">Chọn vị trí GPS nhanh:</label>
-            <select id="citySelect" onchange="onCitySelected()">
-                <option value="10.823,106.629">TP. Hồ Chí Minh (10.823, 106.629)</option>
-                <option value="21.0285,105.8542">Hà Nội (21.0285, 105.8542)</option>
-                <option value="16.0544,108.2022">Đà Nẵng (16.0544, 108.2022)</option>
-                <option value="15.8801,108.3380">Hội An (15.8801, 108.3380)</option>
-                <option value="10.3705,105.4272">An Giang / Miền Tây (10.3705, 105.4272)</option>
-            </select>
+            <label style="margin-top: 14px; display:block;">Vị trí GPS:</label>
+            <button class="btn-yellow" onclick="findMyGPS()">Tìm tọa độ GPS của tôi</button>
 
-            <div class="row">
+            <div class="row" style="margin-top: 10px;">
                 <div>
                     <label for="latInput">Vĩ độ (Lat):</label>
-                    <input type="text" id="latInput" value="10.823">
+                    <input type="text" id="latInput" placeholder="Ví dụ: 10.823">
                 </div>
                 <div>
                     <label for="lonInput">Kinh độ (Lon):</label>
-                    <input type="text" id="lonInput" value="106.629">
+                    <input type="text" id="lonInput" placeholder="Ví dụ: 106.629">
                 </div>
             </div>
-            <button class="btn-success" onclick="sendGPSConfig()">Cập nhật Tọa độ GPS</button>
+            <button class="btn-success" onclick="sendGPSConfig()">Gửi Tọa độ GPS xuống Đồng hồ</button>
         </div>
 
         <!-- Điều khiển nhanh -->
@@ -284,22 +278,40 @@
         alert("Đã yêu cầu cập nhật thời tiết!");
     }
 
-    function onCitySelected() {
-        const val = document.getElementById("citySelect").value;
-        const parts = val.split(",");
-        document.getElementById("latInput").value = parts[0];
-        document.getElementById("lonInput").value = parts[1];
+    // Hàm tìm tọa độ GPS thực tế của trình duyệt và điền vào ô input
+    function findMyGPS() {
+        if (!navigator.geolocation) {
+            alert("Trình duyệt của bạn không hỗ trợ định vị GPS!");
+            return;
+        }
+        updateStatus("Đang quét vị trí GPS thực tế...", true);
+        
+        navigator.geolocation.getCurrentPosition((position) => {
+            const lat = position.coords.latitude.toFixed(4);
+            const lon = position.coords.longitude.toFixed(4);
+            
+            document.getElementById("latInput").value = lat;
+            document.getElementById("lonInput").value = lon;
+            
+            updateStatus(`Đã tìm thấy GPS (${lat}, ${lon})!`, true);
+            alert(`Đã định vị thành công vị trí của ông!\nLat: ${lat}\nLon: ${lon}\nBây giờ bấm nút "Gửi Tọa độ GPS xuống Đồng hồ" là xong!`);
+            
+        }, (error) => {
+            console.error("Lỗi lấy GPS:", error);
+            alert("Không thể lấy vị trí GPS. Hãy kiểm tra quyền cấp vị trí (Location Permission) trên trình duyệt!");
+            updateStatus("Lỗi lấy GPS", false);
+        }, { enableHighAccuracy: true });
     }
 
     async function sendGPSConfig() {
         const lat = document.getElementById("latInput").value;
         const lon = document.getElementById("lonInput").value;
         if (!lat || !lon) {
-            alert("Vui lòng nhập đầy đủ tọa độ GPS!");
+            alert("Vui lòng bấm 'Tìm tọa độ GPS của tôi' hoặc nhập tọa độ trước!");
             return;
         }
         await sendBLECommand(`GPS:${lat},${lon}`);
-        alert("Đã cập nhật tọa độ GPS và tải lại thời tiết!");
+        alert(`Đã gửi tọa độ (${lat}, ${lon}) xuống đồng hồ thành công!\nĐồng hồ sẽ cập nhật thời tiết theo vị trí mới.`);
     }
 
     async function requestWiFiScan() {
@@ -355,7 +367,7 @@
             return;
         }
         await sendBLECommand(`WIFI:${ssid},${pass}`);
-        alert("Đaż lưu Wi-Fi vào đồng hồ thành công!");
+        alert("Đã lưu Wi-Fi vào đồng hồ thành công!");
     }
 
     function updateStatus(msg, isConnected) {

@@ -25,9 +25,9 @@ void drawWeatherFaceData(const WeatherData& w) {
         currentHour = timeinfo.tm_hour;
     }
 
-    // Vòng lặp vẽ 24 mốc giờ quanh viền tròn (mỗi giờ cách nhau 360/24 = 15 độ)
-    for (int i = 0; i < 24; i++) {
-        float angleDeg = i * 15.0f - 90.0f; // Bắt đầu từ đỉnh (12h)
+    // Vòng lặp vẽ 12 mốc giờ quanh viền tròn (mỗi giờ cách nhau 360/12 = 30 độ)
+    for (int i = 0; i < 12; i++) {
+        float angleDeg = i * 30.0f - 90.0f; // Bắt đầu từ đỉnh (12h)
         float angleRad = angleDeg * (3.14159f / 180.0f);
 
         int hourVal = w.hourly[i].hour;

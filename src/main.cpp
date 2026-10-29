@@ -43,7 +43,7 @@ bool lastButtonState = HIGH;
 // Khai báo nguyên mẫu hàm refreshCurrentScreen
 void refreshCurrentScreen();
 
-// Hàm lưu Wi-Fi vào Flash vĩnh viễn (Đã đưa lên trước MyCallbacks để tránh lỗi biên dịch)
+// Hàm lưu Wi-Fi vào Flash vĩnh viễn
 void saveWiFiToFlash(String ssid, String pass) {
     Preferences prefs;
     prefs.begin("wifi_store", false);
@@ -63,12 +63,45 @@ class MyCallbacks: public BLECharacteristicCallbacks {
             if (command == "SLEEP_ON") {
                 currentScreen = SCREEN_SLEEP;
                 refreshCurrentScreen();
-            } else if (command == "SLEEP_OFF") {
+            } 
+            else if (command == "SLEEP_OFF") {
                 currentScreen = SCREEN_ANALOG;
                 refreshCurrentScreen();
             } 
+            // 1. Đồng bộ thời gian thực từ Web / Điện thoại
+            else if (command.startsWith("SYNC_TIME:")) {
+                time_t epochTime = command.substring(10).toInt();
+                struct timeval tv = { .tv_sec = epochTime, .tv_usec = 0 };
+                settimeofday(&tv, NULL);
+                Serial.println("Đã đồng bộ thời gian từ BLE thành công!");
+            }
+            // 2. Đồng bộ / Làm mới thời tiết theo yêu cầu
+            else if (command == "SYNC_WEATHER") {
+                fetchHourlyWeather();
+                refreshCurrentScreen();
+                Serial.println("Đã cập nhật lại thời tiết!");
+            }
+            // 3. Nhận và lưu tọa độ GPS mới, sau đó gọi load lại thời tiết
+            else if (command.startsWith("GPS:")) {
+                int commaIndex = command.indexOf(',', 4);
+                if (commaIndex != -1) {
+                    String latStr = command.substring(4, commaIndex);
+                    String lonStr = command.substring(commaIndex + 1);
+
+                    Preferences prefs;
+                    prefs.begin("wifi_store", false);
+                    prefs.putString("saved_lat", latStr);
+                    prefs.putString("saved_lon", lonStr);
+                    prefs.end();
+
+                    Serial.println("Đã lưu GPS mới: " + latStr + ", " + lonStr);
+
+                    fetchHourlyWeather();
+                    refreshCurrentScreen();
+                }
+            }
+            // 4. Quét Wi-Fi xung quanh gửi lên Web
             else if (command == "SCAN_WIFI") {
-                // Thực hiện quét Wi-Fi xung quanh
                 WiFi.mode(WIFI_STA);
                 WiFi.disconnect();
                 int n = WiFi.scanNetworks();
@@ -81,13 +114,12 @@ class MyCallbacks: public BLECharacteristicCallbacks {
                 jsonResult += "]";
                 WiFi.scanDelete();
 
-                // Gửi danh sách JSON lên Web thông qua BLE Notify
                 pCharacteristic->setValue(jsonResult.c_str());
                 pCharacteristic->notify();
                 Serial.println("Đã gửi danh sách Wi-Fi qua BLE: " + jsonResult);
             }
+            // 5. Lưu thông tin Wi-Fi vào Flash
             else if (command.startsWith("WIFI:")) {
-                // Định dạng nhận: WIFI:SSID,PASSWORD
                 int commaIndex = command.indexOf(',', 5);
                 if (commaIndex != -1) {
                     String newSsid = command.substring(5, commaIndex);
@@ -95,7 +127,6 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 
                     saveWiFiToFlash(newSsid, newPass);
 
-                    // Kết nối ngay lập tức với Wi-Fi mới
                     WiFi.begin(newSsid.c_str(), newPass.c_str());
                     wifiPowerStatus = true;
                 }
@@ -109,7 +140,6 @@ void setupBLE() {
     BLEServer *pServer = BLEDevice::createServer();
     BLEService *pService = pServer->createService(SERVICE_UUID);
     
-    // Thêm PROPERTY_NOTIFY để chip có thể đẩy dữ liệu danh sách wifi lên web
     pCharacteristic = pService->createCharacteristic(
                         CHARACTERISTIC_UUID,
                         BLECharacteristic::PROPERTY_READ |
@@ -239,7 +269,6 @@ void setup() {
     showBootTerminal();
     setupBLE();
 
-    // Đọc Wi-Fi đã lưu từ Flash (nếu có) để tự động kết nối
     Preferences prefs;
     prefs.begin("wifi_store", true);
     String savedSsid = prefs.getString("saved_ssid", "");
