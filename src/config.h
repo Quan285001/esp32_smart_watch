@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // Thêm SCREEN_SLEEP vào danh sách trạng thái
-enum ScreenState { SCREEN_WEATHER, SCREEN_ANALOG, SCREEN_MENU, SCREEN_SLEEP, SCREEN_INFO };
+enum ScreenState { SCREEN_BOOT, SCREEN_WEATHER, SCREEN_ANALOG, SCREEN_MENU, SCREEN_SLEEP, SCREEN_INFO };
 struct HourlyForecast {
     int hour;
     int temp;
@@ -14,7 +14,7 @@ struct WeatherData {
     int maxTemp;
     int minTemp;
     String conditionText;
-    HourlyForecast hourly[12];
+    HourlyForecast hourly[24];
     int batteryPct;
     bool isCharging;
 };

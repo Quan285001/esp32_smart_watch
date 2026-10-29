@@ -12,8 +12,8 @@ void drawSystemInfoScreen() {
     // Tiêu đề
     tft.setTextColor(0xFFFF, 0x0000);
     tft.setTextDatum(MC_DATUM);
-    tft.drawString("SYSTEM INFO", centerX, 22, 2);
-    tft.drawFastHLine(40, 36, 160, 0x3186);
+    tft.drawString("SYSTEM INFO", centerX, 20, 2);
+    tft.drawFastHLine(40, 32, 160, 0x3186);
 
     // Lấy thông số hệ thống
     unsigned long uptimeSeconds = millis() / 1000;
@@ -25,35 +25,45 @@ void drawSystemInfoScreen() {
     sprintf(uptimeStr, "%02d:%02d:%02d", hours, minutes, seconds);
 
     uint32_t freeHeap = ESP.getFreeHeap();
-    String ipStr = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "Disconnected";
+    
+    // Lấy tên Wi-Fi (SSID) và IP nếu đã kết nối
+    bool isConnected = (WiFi.status() == WL_CONNECTED);
+    String wifiName = isConnected ? WiFi.SSID() : "Disconnected";
+    String ipStr = isConnected ? WiFi.localIP().toString() : "No IP";
 
-    // In thông số ra màn hình
+    // In thông số ra màn hình (Căn chỉnh tọa độ tối ưu cho màn tròn 240x240)
     tft.setTextDatum(ML_DATUM);
-    int startY = 60;
-    int spacing = 28;
+    int startY = 48;
+    int spacing = 24;
 
     // 1. Uptime
     tft.setTextColor(0xCE79, 0x0000);
-    tft.drawString("Uptime:", 30, startY, 1);
+    tft.drawString("Uptime:", 25, startY, 1);
     tft.setTextColor(0xFFFF, 0x0000);
-    tft.drawString(uptimeStr, 95, startY, 2);
+    tft.drawString(uptimeStr, 90, startY, 2);
 
     // 2. Free RAM (Heap)
     tft.setTextColor(0xCE79, 0x0000);
-    tft.drawString("Free RAM:", 30, startY + spacing, 1);
+    tft.drawString("Free RAM:", 25, startY + spacing, 1);
     tft.setTextColor(0xFDE0, 0x0000);
     char heapStr[20];
     sprintf(heapStr, "%d KB", freeHeap / 1024);
-    tft.drawString(heapStr, 95, startY + spacing, 2);
+    tft.drawString(heapStr, 90, startY + spacing, 2);
 
-    // 3. Wi-Fi Status / IP
+    // 3. Wi-Fi SSID (Tên mạng đang kết nối)
     tft.setTextColor(0xCE79, 0x0000);
-    tft.drawString("IP Address:", 30, startY + (spacing * 2), 1);
-    tft.setTextColor(0x07E0, 0x0000); // Xanh lá nếu có IP
-    tft.drawString(ipStr.c_str(), 30, startY + (spacing * 2) + 14, 1);
+    tft.drawString("Wi-Fi:", 25, startY + (spacing * 2), 1);
+    tft.setTextColor(isConnected ? 0x07E0 : 0xF800, 0x0000); // Xanh lá nếu có mạng, Đỏ nếu mất kết nối
+    tft.drawString(wifiName.c_str(), 90, startY + (spacing * 2), 1);
+
+    // 4. IP Address
+    tft.setTextColor(0xCE79, 0x0000);
+    tft.drawString("IP:", 25, startY + (spacing * 3), 1);
+    tft.setTextColor(0x07E0, 0x0000);
+    tft.drawString(ipStr.c_str(), 90, startY + (spacing * 3), 1);
 
     // Hướng dẫn quay lại
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(0x7BEF, 0x0000);
-    tft.drawString("[Press: Back to Menu]", centerX, 205, 1);
+    tft.drawString("[Press: Back to Menu]", centerX, 212, 1);
 }

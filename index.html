@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32-C3 Smartwatch Control Panel</title>
+    <title>ESP32-C3 Smartwatch Pro Dashboard</title>
     <style>
         :root {
-            --bg-color: #0f172a;
+            --bg-color: #0b0f19;
             --card-bg: #1e293b;
             --text-color: #f8fafc;
-            --accent-color: #fde047;
-            --accent-hover: #facc15;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --btn-yellow: #fde047;
+            --btn-yellow-hover: #facc15;
             --danger-color: #ef4444;
             --danger-hover: #dc2626;
             --success-color: #4ade80;
@@ -27,7 +29,7 @@
         }
         .container {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
         }
         h2 {
             text-align: center;
@@ -36,45 +38,52 @@
         }
         .subtitle {
             text-align: center;
-            font-size: 14px;
+            font-size: 13px;
             color: #94a3b8;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
         .card {
             background-color: var(--card-bg);
             border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            padding: 18px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
             border: 1px solid #334155;
         }
         .card h3 {
             margin-top: 0;
-            font-size: 16px;
+            font-size: 15px;
             border-bottom: 1px solid #334155;
             padding-bottom: 8px;
             color: #cbd5e1;
         }
         button {
             width: 100%;
-            padding: 12px;
-            font-size: 15px;
+            padding: 11px;
+            font-size: 14px;
             font-weight: bold;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         button:active {
             transform: scale(0.98);
         }
         .btn-primary {
             background-color: var(--accent-color);
-            color: #000;
+            color: #0f172a;
         }
         .btn-primary:hover {
             background-color: var(--accent-hover);
+        }
+        .btn-yellow {
+            background-color: var(--btn-yellow);
+            color: #0f172a;
+        }
+        .btn-yellow:hover {
+            background-color: var(--btn-yellow-hover);
         }
         .btn-danger {
             background-color: var(--danger-color);
@@ -85,12 +94,12 @@
         }
         .btn-success {
             background-color: var(--success-color);
-            color: #000;
+            color: #0f172a;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 10px 12px;
-            margin: 8px 0 15px 0;
+            margin: 6px 0 12px 0;
             border-radius: 8px;
             border: 1px solid #475569;
             background-color: #0f172a;
@@ -98,12 +107,12 @@
             box-sizing: border-box;
             font-size: 14px;
         }
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--accent-color);
         }
         label {
-            font-size: 13px;
+            font-size: 12px;
             color: #94a3b8;
         }
         #status {
@@ -112,22 +121,29 @@
             padding: 8px;
             border-radius: 8px;
             background-color: #0f172a;
-            font-size: 14px;
+            font-size: 13px;
             color: #f87171;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             border: 1px solid #334155;
         }
         .connected {
             color: var(--success-color) !important;
             border-color: #166534 !important;
         }
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+        .row button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Smartwatch Control</h2>
-        <div class="subtitle">ESP32-C3 Web Bluetooth Dashboard</div>
+        <h2>Smartwatch Pro</h2>
+        <div class="subtitle">ESP32-C3 Advanced BLE Dashboard</div>
 
         <!-- Trạng thái kết nối -->
         <div class="card">
@@ -135,33 +151,70 @@
             <button id="connectBtn" class="btn-primary" onclick="connectBLE()">Quét & Kết nối BLE</button>
         </div>
 
+        <!-- Đồng bộ & Thời gian & Thời tiết -->
+        <div class="card">
+            <h3>Đồng bộ & Dữ liệu</h3>
+            <button class="btn-yellow" onclick="syncTime()">Đồng bộ thời gian hiện tại (Sync Time)</button>
+            <button class="btn-primary" onclick="syncWeather()">Làm mới thời tiết (Sync Weather)</button>
+            
+            <label for="citySelect" style="margin-top: 10px; display:block;">Chọn vị trí GPS nhanh:</label>
+            <select id="citySelect" onchange="onCitySelected()">
+                <option value="10.823,106.629">TP. Hồ Chí Minh (10.823, 106.629)</option>
+                <option value="21.0285,105.8542">Hà Nội (21.0285, 105.8542)</option>
+                <option value="16.0544,108.2022">Đà Nẵng (16.0544, 108.2022)</option>
+                <option value="15.8801,108.3380">Hội An (15.8801, 108.3380)</option>
+                <option value="10.3705,105.4272">An Giang / Miền Tây (10.3705, 105.4272)</option>
+            </select>
+
+            <div class="row">
+                <div>
+                    <label for="latInput">Vĩ độ (Lat):</label>
+                    <input type="text" id="latInput" value="10.823">
+                </div>
+                <div>
+                    <label for="lonInput">Kinh độ (Lon):</label>
+                    <input type="text" id="lonInput" value="106.629">
+                </div>
+            </div>
+            <button class="btn-success" onclick="sendGPSConfig()">Cập nhật Tọa độ GPS</button>
+        </div>
+
         <!-- Điều khiển nhanh -->
         <div class="card">
             <h3>Điều khiển thiết bị</h3>
-            <button class="btn-primary" onclick="sendBLECommand('SLEEP_ON')">Bật chế độ Ngủ (Sleep Mode)</button>
-            <button class="btn-danger" onclick="sendBLECommand('SLEEP_OFF')">Thức dậy (Wake Up)</button>
+            <div class="row">
+                <button class="btn-yellow" onclick="sendBLECommand('SLEEP_ON')">Ngủ (Sleep)</button>
+                <button class="btn-danger" onclick="sendBLECommand('SLEEP_OFF')">Thức (Wake)</button>
+            </div>
         </div>
 
         <!-- Cấu hình Wi-Fi -->
         <div class="card">
             <h3>Cấu hình Wi-Fi</h3>
+            <button class="btn-primary" onclick="requestWiFiScan()" style="margin-bottom: 10px;">Quét mạng Wi-Fi từ đồng hồ</button>
+            
+            <label for="wifiSelect">Chọn mạng Wi-Fi:</label>
+            <select id="wifiSelect" onchange="onWifiSelected()">
+                <option value="">-- Chưa quét mạng --</option>
+            </select>
+
             <label for="ssid">Tên Wi-Fi (SSID):</label>
-            <input type="text" id="ssid" placeholder="Nhập tên Wi-Fi nhà bạn">
+            <input type="text" id="ssid" placeholder="Nhập tên Wi-Fi">
             
             <label for="pass">Mật khẩu Wi-Fi:</label>
             <input type="password" id="pass" placeholder="Nhập mật khẩu Wi-Fi">
             
-            <button class="btn-success" onclick="sendWiFiConfig()">Cập nhật Wi-Fi qua BLE</button>
+            <button class="btn-success" onclick="sendWiFiConfig()">Lưu Wi-Fi vào Đồng hồ</button>
         </div>
     </div>
 
 <script>
-    // UUID cố định trùng khớp với code BLE phía ESP32-C3
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
     let bluetoothDevice;
     let bleCharacteristic;
+    let receivedData = "";
 
     async function connectBLE() {
         try {
@@ -181,10 +234,15 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
+            await bleCharacteristic.startNotifications();
+            bleCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
+
             updateStatus("Đã kết nối thành công!", true);
             document.getElementById("connectBtn").innerText = "Đã kết nối";
             document.getElementById("connectBtn").style.backgroundColor = "#334155";
             document.getElementById("connectBtn").style.color = "#94a3b8";
+
+            setTimeout(requestWiFiScan, 1000);
 
         } catch (error) {
             console.error("Lỗi kết nối:", error);
@@ -215,16 +273,89 @@
         }
     }
 
+    async function syncTime() {
+        const epochTime = Math.floor(Date.now() / 1000);
+        await sendBLECommand(`SYNC_TIME:${epochTime}`);
+        alert("Đã đồng bộ thời gian từ điện thoại/PC xuống đồng hồ!");
+    }
+
+    async function syncWeather() {
+        await sendBLECommand("SYNC_WEATHER");
+        alert("Đã yêu cầu cập nhật thời tiết!");
+    }
+
+    function onCitySelected() {
+        const val = document.getElementById("citySelect").value;
+        const parts = val.split(",");
+        document.getElementById("latInput").value = parts[0];
+        document.getElementById("lonInput").value = parts[1];
+    }
+
+    async function sendGPSConfig() {
+        const lat = document.getElementById("latInput").value;
+        const lon = document.getElementById("lonInput").value;
+        if (!lat || !lon) {
+            alert("Vui lòng nhập đầy đủ tọa độ GPS!");
+            return;
+        }
+        await sendBLECommand(`GPS:${lat},${lon}`);
+        alert("Đã cập nhật tọa độ GPS và tải lại thời tiết!");
+    }
+
+    async function requestWiFiScan() {
+        if (!bleCharacteristic) {
+            alert("Vui lòng kết nối BLE trước!");
+            return;
+        }
+        receivedData = "";
+        updateStatus("Đang yêu cầu đồng hồ quét Wi-Fi...", true);
+        await sendBLECommand("SCAN_WIFI");
+    }
+
+    function handleNotifications(event) {
+        const value = event.target.value;
+        const decoder = new TextDecoder('utf-8');
+        const chunk = decoder.decode(value);
+        receivedData += chunk;
+
+        if (receivedData.endsWith("]")) {
+            try {
+                const wifiList = JSON.parse(receivedData);
+                populateWifiDropdown(wifiList);
+                updateStatus("Quét Wi-Fi thành công!", true);
+            } catch (e) {
+                console.error("Lỗi parse JSON:", e);
+            }
+        }
+    }
+
+    function populateWifiDropdown(networks) {
+        const select = document.getElementById("wifiSelect");
+        select.innerHTML = '<option value="">-- Chọn mạng Wi-Fi --</option>';
+        networks.forEach(ssid => {
+            const opt = document.createElement("option");
+            opt.value = ssid;
+            opt.textContent = ssid;
+            select.appendChild(opt);
+        });
+    }
+
+    function onWifiSelected() {
+        const selectedSSID = document.getElementById("wifiSelect").value;
+        if (selectedSSID) {
+            document.getElementById("ssid").value = selectedSSID;
+        }
+    }
+
     async function sendWiFiConfig() {
         const ssid = document.getElementById("ssid").value;
         const pass = document.getElementById("pass").value;
         if (!ssid) {
-            alert("Vui lòng nhập tên Wi-Fi!");
+            alert("Vui lòng nhập hoặc chọn tên Wi-Fi!");
             return;
         }
-        const configStr = `WIFI:${ssid},${pass}`;
-        await sendBLECommand(configStr);
-        alert("Đã truyền cấu hình Wi-Fi xuống đồng hồ!");
+        await sendBLECommand(`WIFI:${ssid},${pass}`);
+        alert("Đaż lưu Wi-Fi vào đồng hồ thành công!");
     }
 
     function updateStatus(msg, isConnected) {
