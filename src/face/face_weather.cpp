@@ -35,10 +35,13 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         tft.setTextDatum(MC_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(value,120,88,4);
         tft.setTextColor(BLUE,BG); tft.drawString(w.conditionText,120,113,2);
         snprintf(value,sizeof(value),"Feels %.1f C",w.feelsLike10/10.0f);
-        tft.setTextColor(MUTED,BG); tft.drawString(value,120,133,1);
-        snprintf(value,sizeof(value),"%d%%",w.humidity); labelValue(158,"HUMIDITY",value);
-        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(180,"WIND",value);
-        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(202,"DIRECTION",value);
+        tft.setTextColor(MUTED,BG); tft.drawString(value,120,130,1);
+        snprintf(value,sizeof(value),"H %.1f / L %.1f C",w.maxTemp10/10.0f,w.minTemp10/10.0f);
+        tft.drawString(value,120,146,1);
+        snprintf(value,sizeof(value),"%u%%",w.humidity); labelValue(166,"HUMIDITY",value);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(185,"WIND",value);
+        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(204,"DIRECTION",value);
+        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(220,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
     } else if (page == 1) {
         header("RAIN FORECAST",w,2);
         snprintf(value,sizeof(value),"%u%%",w.precipitationProbability);
@@ -62,7 +65,8 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(116,"DIRECTION",value);
         snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(141,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
         snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(166,"CLOUD",value);
-        labelValue(191,"SUNRISE",w.sunrise);
-        labelValue(211,"SUNSET",w.sunset);
+        snprintf(value,sizeof(value),"%u hPa",w.pressure); labelValue(160,"PRESSURE",value);
+        labelValue(184,"SUNRISE",w.sunrise);
+        labelValue(207,"SUNSET",w.sunset);
     }
 }
