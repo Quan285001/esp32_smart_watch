@@ -11,7 +11,14 @@
 
 WeatherData currentWeather = {};
 static const char *CACHE_PATH = "/weather.json";
-static const uint32_t CACHE_MAX_AGE = 6UL * 60UL * 60UL;
+static bool weatherFsReady = false;
+
+static bool ensureWeatherFilesystem() {
+    if (weatherFsReady) return true;
+    // LittleFS is dedicated to the weather cache; format the blank partition on first boot.
+    weatherFsReady = LittleFS.begin(true);
+    return weatherFsReady;
+}
 
 static bool parseLocalIsoMinute(const char *text, struct tm &out) {
     if (!text || !*text) return false;
@@ -45,7 +52,7 @@ static void copyTime(char *dst, size_t size, JsonVariantConst value) {
 }
 
 bool loadWeatherCache() {
-    if (!LittleFS.begin(false)) return false;
+    if (!ensureWeatherFilesystem()) return false;
     File file = LittleFS.open(CACHE_PATH, "r");
     if (!file) return false;
 
