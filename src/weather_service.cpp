@@ -95,7 +95,7 @@ bool loadWeatherCache() {
 }
 
 static bool saveWeatherCache(const WeatherData &w) {
-    if (!LittleFS.begin(true)) return false;
+    if (!LittleFS.begin(false)) return false;
     JsonDocument doc;
     doc["t"] = w.currentTemp10; doc["f"] = w.feelsLike10;
     doc["hi"] = w.maxTemp10; doc["lo"] = w.minTemp10;
