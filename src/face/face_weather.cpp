@@ -1,87 +1,68 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-#include "icons.h"
-#include "config.h"
-#include <math.h>
 #include <time.h>
+#include "config.h"
 
 extern TFT_eSPI tft;
+static const uint16_t BG=0x0000, WHITE=0xFFFF, MUTED=0x9CF3, BLUE=0x5DDF, YELLOW=0xFDE0, GREEN=0x07E0, RED=0xF800;
 
-void drawWeatherFaceData(const WeatherData& w) {
-    tft.fillScreen(0x0000); // Nền đen
+static void header(const char *title, const WeatherData &w, uint8_t page) {
+    tft.fillScreen(BG);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(WHITE, BG);
+    tft.drawString(title, 120, 20, 2);
+    tft.drawFastHLine(24, 34, 192, 0x39E7);
+    tft.setTextDatum(MR_DATUM);
+    tft.setTextColor(w.fromCache ? YELLOW : GREEN, BG);
+    tft.drawString(w.valid ? (w.fromCache ? "CACHE" : "LIVE") : "NO DATA", 215, 47, 1);
+    tft.setTextDatum(ML_DATUM);
+    tft.setTextColor(MUTED, BG);
+    tft.drawString(w.updatedAt[0] ? w.updatedAt : "Not synchronized", 25, 226, 1);
+    tft.setTextDatum(MC_DATUM);
+    char pageText[8]; snprintf(pageText,sizeof(pageText),"%u/3",page);
+    tft.drawString(pageText,120,226,1);
+}
+static void labelValue(int y,const char *label,const char *value,uint16_t color=WHITE) {
+    tft.setTextDatum(ML_DATUM); tft.setTextColor(MUTED,BG); tft.drawString(label,28,y,1);
+    tft.setTextDatum(MR_DATUM); tft.setTextColor(color,BG); tft.drawString(value,212,y,2);
+}
 
-    int centerX = 120;
-    int centerY = 120;
-    int radius = 98; // Bán kính vòng tròn 24 giờ
-
-    // Vẽ khung viền tròn trang trí
-    tft.drawCircle(centerX, centerY, radius + 18, 0x3186);
-    tft.drawCircle(centerX, centerY, radius - 16, 0x3186);
-
-    // Lấy giờ hệ thống thực tế (0 - 23)
-    struct tm timeinfo;
-    int currentHour = 12;
-    if (getLocalTime(&timeinfo)) {
-        currentHour = timeinfo.tm_hour;
-    }
-
-    // Vòng lặp vẽ 12 mốc giờ quanh viền tròn (mỗi giờ cách nhau 360/12 = 30 độ)
-    for (int i = 0; i < 12; i++) {
-        float angleDeg = i * 30.0f - 90.0f; // Bắt đầu từ đỉnh (12h)
-        float angleRad = angleDeg * (3.14159f / 180.0f);
-
-        int hourVal = w.hourly[i].hour;
-        bool isCurrentHour = (hourVal == currentHour);
-
-        int textX = centerX + (int)(radius * cos(angleRad));
-        int textY = centerY + (int)(radius * sin(angleRad));
-
-        // Giờ hiện tại: Nền trắng, chữ đen; Các giờ khác: Chữ xám mờ
-        if (isCurrentHour) {
-            tft.fillCircle(textX, textY, 11, 0xFFFF); // Nền trắng
-            tft.setTextColor(0x0000, 0xFFFF);        // Chữ đen
-        } else {
-            tft.setTextColor(0x7BEF, 0x0000);        // Xám mờ
+void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
+    char value[24];
+    if (page == 0) {
+        header("CURRENT WEATHER",w,1);
+        snprintf(value,sizeof(value),"%.1f C",w.currentTemp10/10.0f);
+        tft.setTextDatum(MC_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(value,120,88,4);
+        tft.setTextColor(BLUE,BG); tft.drawString(w.conditionText,120,113,2);
+        snprintf(value,sizeof(value),"Feels %.1f C",w.feelsLike10/10.0f);
+        tft.setTextColor(MUTED,BG); tft.drawString(value,120,133,1);
+        snprintf(value,sizeof(value),"%d%%",w.humidity); labelValue(158,"HUMIDITY",value);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(180,"WIND",value);
+        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(202,"DIRECTION",value);
+    } else if (page == 1) {
+        header("RAIN FORECAST",w,2);
+        snprintf(value,sizeof(value),"%u%%",w.precipitationProbability);
+        tft.setTextDatum(MC_DATUM); tft.setTextColor(BLUE,BG); tft.drawString(value,120,65,4);
+        tft.setTextColor(MUTED,BG); tft.drawString("NEXT HOURS",120,91,1);
+        for (uint8_t i=0;i<6 && i<w.hourlyCount;i++) {
+            const HourlyForecast &h=w.hourly[i];
+            int y=111+i*17;
+            time_t ts=h.timestamp; struct tm tmv; localtime_r(&ts,&tmv);
+            char hour[8]; strftime(hour,sizeof(hour),"%H:%M",&tmv);
+            tft.setTextDatum(ML_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(hour,27,y,1);
+            tft.drawRect(75,y-5,92,7,0x4208);
+            tft.fillRect(76,y-4,(int)(90*h.precipitationProbability/100.0f),5,BLUE);
+            snprintf(value,sizeof(value),"%u%%",h.precipitationProbability);
+            tft.setTextDatum(MR_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(value,211,y,1);
         }
-
-        tft.setTextDatum(MC_DATUM);
-        char hourStr[4];
-        sprintf(hourStr, "%02d", hourVal);
-        tft.drawString(hourStr, textX, textY, 1);
-
-        // Vẽ icon thời tiết nhỏ phía trong vòng số giờ
-        int iconX = centerX + (int)((radius - 26) * cos(angleRad));
-        int iconY = centerY + (int)((radius - 26) * sin(angleRad));
-        
-        bool isNightHourly = (hourVal < 6 || hourVal >= 18);
-        int code = w.hourly[i].weatherCode;
-
-        if (code == 0) {
-            if (isNightHourly) drawMiniCrescentMoon(tft, iconX, iconY, 0xFCE0);
-            else drawMiniSun(tft, iconX, iconY, 0xFDE0);
-        } else if (code >= 1 && code <= 3) {
-            if (isNightHourly) drawMiniMoonCloud(tft, iconX, iconY, 0xFFFF);
-            else drawMiniSunCloud(tft, iconX, iconY, 0xFFFF);
-        } else if (code >= 51 && code <= 67) {
-            drawMiniRain(tft, iconX, iconY, 0x001F);
-        } else if (code >= 95) {
-            drawMiniThunder(tft, iconX, iconY, 0xFDE0);
-        } else {
-            drawMiniSunCloud(tft, iconX, iconY, 0xFFFF);
-        }
+    } else {
+        header("WIND & SUN",w,3);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(66,"WIND",value);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windGust10/10.0f); labelValue(91,"GUST",value);
+        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(116,"DIRECTION",value);
+        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(141,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
+        snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(166,"CLOUD",value);
+        labelValue(191,"SUNRISE",w.sunrise);
+        labelValue(211,"SUNSET",w.sunset);
     }
-
-    // --- KHU VỰC TRUNG TÂM ---
-    tft.setTextColor(0xFFFF, 0x0000);
-    char tempStr[10];
-    sprintf(tempStr, "%d°", w.currentTemp);
-    tft.drawString(tempStr, centerX, centerY - 14, 4);
-
-    char hlStr[24];
-    sprintf(hlStr, "H:%d° L:%d°", w.maxTemp, w.minTemp);
-    tft.setTextColor(0xCE79, 0x0000);
-    tft.drawString(hlStr, centerX, centerY + 10, 1);
-
-    tft.setTextColor(0xFDE0, 0x0000);
-    tft.drawString(w.conditionText.c_str(), centerX, centerY + 28, 1);
 }
