@@ -144,7 +144,7 @@ bool fetchHourlyWeather() {
 
     String url = "https://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 4) +
         "&longitude=" + String(lon, 4) +
-        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index" +
+        "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m" +
         "&hourly=temperature_2m,precipitation_probability,precipitation,wind_speed_10m,uv_index,weather_code" +
         "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,moonrise,moonset,moon_phase,precipitation_probability_max,precipitation_sum" +
         "&forecast_days=2&timezone=Asia%2FBangkok";
@@ -167,7 +167,7 @@ bool fetchHourlyWeather() {
     next.currentTemp10 = lroundf((cur["temperature_2m"] | 0.0f) * 10);
     next.feelsLike10 = lroundf((cur["apparent_temperature"] | 0.0f) * 10);
     next.humidity = cur["relative_humidity_2m"] | 0;
-    next.uvIndex = (uint8_t)lroundf(cur["uv_index"] | 0.0f);
+    next.uvIndex = 0;
     next.cloudCover = cur["cloud_cover"] | 0;
     next.windSpeed10 = lroundf((cur["wind_speed_10m"] | 0.0f) * 10);
     next.windGust10 = lroundf((cur["wind_gusts_10m"] | 0.0f) * 10);
@@ -209,7 +209,10 @@ bool fetchHourlyWeather() {
         h.uvIndex = (uint8_t)lroundf(uv[i] | 0.0f);
         h.weatherCode = codes[i] | 0;
     }
-    if (next.hourlyCount) next.precipitationProbability = next.hourly[0].precipitationProbability;
+    if (next.hourlyCount) {
+        next.precipitationProbability = next.hourly[0].precipitationProbability;
+        next.uvIndex = next.hourly[0].uvIndex;
+    }
 
     time_t updated = time(nullptr);
     struct tm local;
