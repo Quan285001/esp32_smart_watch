@@ -56,7 +56,7 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         header("RAIN FORECAST",w,2);
         snprintf(value,sizeof(value),"%u%%",w.precipitationProbability);
         tft.setTextDatum(MC_DATUM); tft.setTextColor(BLUE,BG); tft.drawString(value,120,65,4);
-        tft.setTextColor(MUTED,BG); tft.drawString("NEXT HOURS",120,91,1);
+        tft.setTextColor(MUTED,BG); tft.drawString("RAIN PROBABILITY / MM",120,91,1);
         for (uint8_t i=0;i<6 && i<w.hourlyCount;i++) {
             const HourlyForecast &h=w.hourly[i];
             int y=111+i*17;
@@ -66,7 +66,9 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
             tft.drawRect(75,y-5,92,7,0x4208);
             tft.fillRect(76,y-4,(int)(90*h.precipitationProbability/100.0f),5,BLUE);
             snprintf(value,sizeof(value),"%u%%",h.precipitationProbability);
-            tft.setTextDatum(MR_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(value,211,y,1);
+            tft.setTextDatum(MR_DATUM); tft.setTextColor(WHITE,BG); tft.drawString(value,211,y-2,1);
+            snprintf(value,sizeof(value),"%.1fmm",h.precipitation10/10.0f);
+            tft.setTextColor(BLUE,BG); tft.drawString(value,211,y+8,1);
         }
     } else {
         header("WIND & SUN",w,3);
