@@ -20,10 +20,10 @@ static void header(const char *title, const WeatherData &w, uint8_t page) {
     char stamp[16];
     if (strlen(w.updatedAt) >= 16) snprintf(stamp, sizeof(stamp), "SYNC %c%c:%c%c", w.updatedAt[11], w.updatedAt[12], w.updatedAt[14], w.updatedAt[15]);
     else snprintf(stamp, sizeof(stamp), "NOT SYNCED");
-    tft.drawString(stamp, 24, 226, 1);
+    tft.drawString(stamp, 24, 234, 1);
     tft.setTextDatum(MR_DATUM);
     char pageText[8]; snprintf(pageText,sizeof(pageText),"%u/3",page);
-    tft.drawString(pageText,216,226,1);
+    tft.drawString(pageText,216,234,1);
 }
 static void labelValue(int y,const char *label,const char *value,uint16_t color=WHITE) {
     tft.setTextDatum(ML_DATUM); tft.setTextColor(MUTED,BG); tft.drawString(label,28,y,1);
