@@ -70,6 +70,9 @@ bool loadWeatherCache() {
     next.precipitationProbability = doc["pp"] | 0;
     strlcpy(next.sunrise, doc["sr"] | "--:--", sizeof(next.sunrise));
     strlcpy(next.sunset, doc["ss"] | "--:--", sizeof(next.sunset));
+    strlcpy(next.moonrise, doc["mr"] | "--:--", sizeof(next.moonrise));
+    strlcpy(next.moonset, doc["ms"] | "--:--", sizeof(next.moonset));
+    next.moonPhase = doc["mp"] | 0;
     strlcpy(next.updatedAt, doc["u"] | "", sizeof(next.updatedAt));
     strlcpy(next.conditionText, doc["c"] | "Cached", sizeof(next.conditionText));
 
@@ -102,6 +105,7 @@ static bool saveWeatherCache(const WeatherData &w) {
     doc["p"] = w.pressure; doc["r"] = w.rain10;
     doc["pp"] = w.precipitationProbability;
     doc["sr"] = w.sunrise; doc["ss"] = w.sunset;
+    doc["mr"] = w.moonrise; doc["ms"] = w.moonset; doc["mp"] = w.moonPhase;
     doc["u"] = w.updatedAt; doc["c"] = w.conditionText;
     JsonArray hours = doc["hours"].to<JsonArray>();
     for (uint8_t i = 0; i < w.hourlyCount; ++i) {
@@ -142,7 +146,7 @@ bool fetchHourlyWeather() {
         "&longitude=" + String(lon, 4) +
         "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index" +
         "&hourly=temperature_2m,precipitation_probability,precipitation,wind_speed_10m,uv_index,weather_code" +
-        "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,precipitation_sum" +
+        "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,moonrise,moonset,moon_phase,precipitation_probability_max,precipitation_sum" +
         "&forecast_days=2&timezone=Asia%2FBangkok";
 
     WiFiClientSecure client;
@@ -178,6 +182,9 @@ bool fetchHourlyWeather() {
     next.minTemp10 = lroundf((daily["temperature_2m_min"][0] | 0.0f) * 10);
     copyTime(next.sunrise, sizeof(next.sunrise), daily["sunrise"][0]);
     copyTime(next.sunset, sizeof(next.sunset), daily["sunset"][0]);
+    copyTime(next.moonrise, sizeof(next.moonrise), daily["moonrise"][0]);
+    copyTime(next.moonset, sizeof(next.moonset), daily["moonset"][0]);
+    next.moonPhase = (uint8_t)lroundf((daily["moon_phase"][0] | 0.0f) * 100.0f);
 
     JsonArrayConst times = doc["hourly"]["time"];
     JsonArrayConst temps = doc["hourly"]["temperature_2m"];
