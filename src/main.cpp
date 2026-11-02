@@ -257,6 +257,8 @@ void setup() {
     delay(250);
     commandQueue = xQueueCreate(6, sizeof(BleCommand));
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    setenv("TZ", "ICT-7", 1);
+    tzset();
     tft.init();
     tft.setRotation(0);
     showBootTerminal();
