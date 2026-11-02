@@ -6,11 +6,23 @@
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <time.h>
+#include <math.h>
 #include "config.h"
 
 WeatherData currentWeather = {};
 static const char *CACHE_PATH = "/weather.json";
 static const uint32_t CACHE_MAX_AGE = 6UL * 60UL * 60UL;
+
+static bool parseLocalIsoMinute(const char *text, struct tm &out) {
+    if (!text || !*text) return false;
+    int year, month, day, hour, minute;
+    if (sscanf(text, "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute) != 5) return false;
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return false;
+    out = {};
+    out.tm_year = year - 1900; out.tm_mon = month - 1; out.tm_mday = day;
+    out.tm_hour = hour; out.tm_min = minute; out.tm_isdst = -1;
+    return mktime(&out) > 0;
+}
 
 static String weatherDescription(int code) {
     if (code == 0) return "Clear";
@@ -33,7 +45,7 @@ static void copyTime(char *dst, size_t size, JsonVariantConst value) {
 }
 
 bool loadWeatherCache() {
-    if (!LittleFS.begin(true)) return false;
+    if (!LittleFS.begin(false)) return false;
     File file = LittleFS.open(CACHE_PATH, "r");
     if (!file) return false;
 
@@ -109,7 +121,7 @@ static bool saveWeatherCache(const WeatherData &w) {
 bool weatherCacheIsStale(uint32_t maxAgeSeconds) {
     if (!currentWeather.valid || !currentWeather.updatedAt[0]) return true;
     struct tm updated = {};
-    if (!strptime(currentWeather.updatedAt, "%Y-%m-%dT%H:%M", &updated)) return true;
+    if (!parseLocalIsoMinute(currentWeather.updatedAt, updated)) return true;
     time_t then = mktime(&updated);
     time_t now = time(nullptr);
     if (then <= 0 || now <= then) return true;
@@ -178,7 +190,7 @@ bool fetchHourlyWeather() {
     for (size_t i = 0; i < times.size() && next.hourlyCount < 24; ++i) {
         const char *stamp = times[i] | "";
         struct tm tmHour = {};
-        if (!strptime(stamp, "%Y-%m-%dT%H:%M", &tmHour)) continue;
+        if (!parseLocalIsoMinute(stamp, tmHour)) continue;
         time_t epoch = mktime(&tmHour);
         if (epoch < now - 3600) continue;
         HourlyForecast &h = next.hourly[next.hourlyCount++];
