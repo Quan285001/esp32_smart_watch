@@ -15,15 +15,15 @@ static void header(const char *title, const WeatherData &w, uint8_t page) {
     tft.setTextDatum(MR_DATUM);
     tft.setTextColor(w.fromCache ? YELLOW : GREEN, BG);
     tft.drawString(w.valid ? (w.fromCache ? "CACHE" : "LIVE") : "NO DATA", 215, 47, 1);
-    tft.setTextDatum(ML_DATUM);
+    tft.setTextDatum(MC_DATUM);
     tft.setTextColor(MUTED, BG);
     char stamp[16];
     if (strlen(w.updatedAt) >= 16) snprintf(stamp, sizeof(stamp), "SYNC %c%c:%c%c", w.updatedAt[11], w.updatedAt[12], w.updatedAt[14], w.updatedAt[15]);
     else snprintf(stamp, sizeof(stamp), "NOT SYNCED");
-    tft.drawString(stamp, 24, 234, 1);
+    tft.drawString(stamp, 105, 226, 1);
     tft.setTextDatum(MR_DATUM);
     char pageText[8]; snprintf(pageText,sizeof(pageText),"%u/3",page);
-    tft.drawString(pageText,216,234,1);
+    tft.drawString(pageText,178,226,1);
 }
 static void labelValue(int y,const char *label,const char *value,uint16_t color=WHITE) {
     tft.setTextDatum(ML_DATUM); tft.setTextColor(MUTED,BG); tft.drawString(label,28,y,1);
@@ -51,7 +51,7 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         snprintf(value,sizeof(value),"%u%%",w.humidity); labelValue(166,"HUMIDITY",value);
         snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(185,"WIND",value);
         snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(204,"DIRECTION",value);
-        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(220,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
+        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(210,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
     } else if (page == 1) {
         header("RAIN FORECAST",w,2);
         snprintf(value,sizeof(value),"%u%%",w.precipitationProbability);
@@ -82,6 +82,6 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         labelValue(164,"SUNSET",w.sunset);
         labelValue(180,"MOONRISE",w.moonrise);
         labelValue(196,"MOONSET",w.moonset);
-        snprintf(value,sizeof(value),"%u/100",w.moonPhase); labelValue(212,"PHASE CYCLE",value);
+        snprintf(value,sizeof(value),"%u/100",w.moonPhase); labelValue(208,"PHASE CYCLE",value);
     }
 }
