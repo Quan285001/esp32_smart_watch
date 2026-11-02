@@ -29,6 +29,13 @@ static void labelValue(int y,const char *label,const char *value,uint16_t color=
 
 void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
     char value[24];
+    if (!w.valid) {
+        header("WEATHER OFFLINE", w, page + 1);
+        tft.setTextDatum(MC_DATUM); tft.setTextColor(YELLOW, BG);
+        tft.drawString("No cached forecast", 120, 112, 2);
+        tft.setTextColor(MUTED, BG); tft.drawString("Connect Wi-Fi to sync", 120, 135, 1);
+        return;
+    }
     if (page == 0) {
         header("CURRENT WEATHER",w,1);
         snprintf(value,sizeof(value),"%.1f C",w.currentTemp10/10.0f);
@@ -61,12 +68,14 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
     } else {
         header("WIND & SUN",w,3);
         snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(66,"WIND",value);
-        snprintf(value,sizeof(value),"%.1f km/h",w.windGust10/10.0f); labelValue(91,"GUST",value);
-        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(116,"DIRECTION",value);
-        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(141,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
-        snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(166,"CLOUD",value);
-        snprintf(value,sizeof(value),"%u hPa",w.pressure); labelValue(160,"PRESSURE",value);
-        labelValue(184,"SUNRISE",w.sunrise);
-        labelValue(207,"SUNSET",w.sunset);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windGust10/10.0f); labelValue(84,"GUST",value);
+        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(102,"DIRECTION",value);
+        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(120,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
+        snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(138,"CLOUD",value);
+        snprintf(value,sizeof(value),"%u hPa",w.pressure); labelValue(156,"PRESSURE",value);
+        labelValue(174,"SUNRISE",w.sunrise);
+        labelValue(192,"SUNSET",w.sunset);
+        labelValue(210,"MOONRISE",w.moonrise);
+        labelValue(228,"MOONSET",w.moonset);
     }
 }
