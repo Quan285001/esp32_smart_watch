@@ -183,6 +183,7 @@ static void processBleCommand(const BleCommand &cmd) {
         String newSsid(cmd.payload), newPass(comma + 1);
         saveWiFi(newSsid, newPass);
         WiFi.mode(WIFI_STA);
+        wifiPowerStatus = true;
         WiFi.begin(newSsid.c_str(), newPass.c_str());
         sendBleText("WIFI_CONNECTING");
         break;
@@ -331,8 +332,16 @@ void loop() {
 
     static uint32_t lastWeatherCheck = 0;
     static uint32_t lastClockDraw = 0;
+    static bool wasWifiConnected = false;
     uint32_t now = millis();
-    if (wifiPowerStatus && WiFi.status() == WL_CONNECTED && now - lastWeatherCheck >= 1800000UL) {
+    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+    if (wifiConnected && !wasWifiConnected) {
+        configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+        lastWeatherCheck = now;
+        startWeatherFetch();
+    }
+    wasWifiConnected = wifiConnected;
+    if (wifiPowerStatus && wifiConnected && now - lastWeatherCheck >= 1800000UL) {
         lastWeatherCheck = now;
         if (weatherCacheIsStale(1800)) startWeatherFetch();
     }
