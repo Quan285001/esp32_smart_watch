@@ -31,6 +31,9 @@ struct WeatherData {
     HourlyForecast hourly[24];
     char sunrise[6];
     char sunset[6];
+    char moonrise[6];
+    char moonset[6];
+    uint8_t moonPhase;
     char updatedAt[20];
     char conditionText[24];
     bool valid;
