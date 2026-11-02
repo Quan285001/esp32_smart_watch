@@ -193,7 +193,11 @@ bool fetchHourlyWeather() {
     JsonArrayConst wind = doc["hourly"]["wind_speed_10m"];
     JsonArrayConst uv = doc["hourly"]["uv_index"];
     JsonArrayConst codes = doc["hourly"]["weather_code"];
-    time_t now = time(nullptr);
+    struct tm currentTm = {};
+    time_t now = 0;
+    const char *apiCurrentTime = cur["time"] | "";
+    if (parseLocalIsoMinute(apiCurrentTime, currentTm)) now = mktime(&currentTm);
+    if (now <= 0) now = time(nullptr);
     for (size_t i = 0; i < times.size() && next.hourlyCount < 24; ++i) {
         const char *stamp = times[i] | "";
         struct tm tmHour = {};
@@ -214,10 +218,7 @@ bool fetchHourlyWeather() {
         next.uvIndex = next.hourly[0].uvIndex;
     }
 
-    time_t updated = time(nullptr);
-    struct tm local;
-    localtime_r(&updated, &local);
-    strftime(next.updatedAt, sizeof(next.updatedAt), "%Y-%m-%dT%H:%M", &local);
+    strlcpy(next.updatedAt, apiCurrentTime, sizeof(next.updatedAt));
     next.valid = true;
     next.fromCache = false;
     currentWeather = next;
