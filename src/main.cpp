@@ -39,6 +39,9 @@ static const int daylightOffset_sec = 0;
 enum CommandType : uint8_t { CMD_NONE, CMD_SLEEP_ON, CMD_SLEEP_OFF, CMD_SYNC_TIME, CMD_SYNC_WEATHER, CMD_GPS, CMD_SCAN_WIFI, CMD_WIFI };
 struct BleCommand { CommandType type; char payload[112]; };
 static QueueHandle_t commandQueue = nullptr;
+static TaskHandle_t weatherTaskHandle = nullptr;
+static volatile bool weatherFetchFinished = false;
+static volatile bool weatherFetchOk = false;
 
 static void enqueueCommand(CommandType type, const String &payload = "") {
     if (!commandQueue) return;
@@ -100,6 +103,24 @@ static void saveWiFi(const String &ssid, const String &pass) {
 
 void refreshCurrentScreen();
 
+static void weatherFetchTask(void *parameter) {
+    (void)parameter;
+    weatherFetchOk = fetchHourlyWeather();
+    weatherFetchFinished = true;
+    weatherTaskHandle = nullptr;
+    vTaskDelete(nullptr);
+}
+
+static bool startWeatherFetch() {
+    if (weatherTaskHandle) return false;
+    weatherFetchFinished = false;
+    if (xTaskCreate(weatherFetchTask, "weatherFetch", 8192, nullptr, 1, &weatherTaskHandle) != pdPASS) {
+        weatherTaskHandle = nullptr;
+        return false;
+    }
+    return true;
+}
+
 static void processBleCommand(const BleCommand &cmd) {
     switch (cmd.type) {
     case CMD_SLEEP_ON:
@@ -120,8 +141,7 @@ static void processBleCommand(const BleCommand &cmd) {
         break;
     }
     case CMD_SYNC_WEATHER:
-        sendBleText(fetchHourlyWeather() ? "WEATHER_OK" : "WEATHER_FAILED");
-        refreshCurrentScreen();
+        sendBleText(startWeatherFetch() ? "WEATHER_QUEUED" : "WEATHER_BUSY");
         break;
     case CMD_GPS: {
         char *comma = strchr(cmd.payload, ',');
@@ -137,8 +157,7 @@ static void processBleCommand(const BleCommand &cmd) {
         prefs.putString("saved_lat", String(lat, 6));
         prefs.putString("saved_lon", String(lon, 6));
         prefs.end();
-        sendBleText(fetchHourlyWeather() ? "GPS_WEATHER_OK" : "GPS_SAVED_WEATHER_PENDING");
-        refreshCurrentScreen();
+        sendBleText(startWeatherFetch() ? "GPS_WEATHER_QUEUED" : "GPS_SAVED_WEATHER_PENDING");
         break;
     }
     case CMD_SCAN_WIFI: {
@@ -289,10 +308,10 @@ void setup() {
         }
         if (WiFi.status() == WL_CONNECTED) {
             configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-            fetchHourlyWeather();
         }
     }
     refreshCurrentScreen();
+    if (WiFi.status() == WL_CONNECTED) startWeatherFetch();
 }
 
 void loop() {
@@ -303,15 +322,18 @@ void loop() {
         processBleCommand(cmd);
     }
 
+    if (weatherFetchFinished) {
+        weatherFetchFinished = false;
+        sendBleText(weatherFetchOk ? "WEATHER_OK" : "WEATHER_FAILED");
+        if (currentScreen == SCREEN_WEATHER) refreshCurrentScreen();
+    }
+
     static uint32_t lastWeatherCheck = 0;
     static uint32_t lastClockDraw = 0;
     uint32_t now = millis();
     if (wifiPowerStatus && WiFi.status() == WL_CONNECTED && now - lastWeatherCheck >= 1800000UL) {
         lastWeatherCheck = now;
-        if (weatherCacheIsStale(1800)) {
-            fetchHourlyWeather();
-            if (currentScreen == SCREEN_WEATHER) refreshCurrentScreen();
-        }
+        if (weatherCacheIsStale(1800)) startWeatherFetch();
     }
 
     if (currentScreen == SCREEN_ANALOG && now - lastClockDraw >= 100) {
