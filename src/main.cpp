@@ -98,7 +98,7 @@ static void saveWiFi(const String &ssid, const String &pass) {
     prefs.end();
 }
 
-static void processBleCommand(const BleCommand &cmd) {
+void refreshCurrentScreen();\n\nstatic void processBleCommand(const BleCommand &cmd) {
     switch (cmd.type) {
     case CMD_SLEEP_ON:
         currentScreen = SCREEN_SLEEP;
