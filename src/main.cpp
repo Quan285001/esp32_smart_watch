@@ -39,7 +39,7 @@ static const int daylightOffset_sec = 0;
 enum CommandType : uint8_t { CMD_NONE, CMD_SLEEP_ON, CMD_SLEEP_OFF, CMD_SYNC_TIME, CMD_SYNC_WEATHER, CMD_GPS, CMD_SCAN_WIFI, CMD_WIFI };
 struct BleCommand { CommandType type; char payload[112]; };
 static QueueHandle_t commandQueue = nullptr;
-static TaskHandle_t weatherTaskHandle = nullptr;
+static volatile bool weatherFetchRunning = false;
 static volatile bool weatherFetchFinished = false;
 static volatile bool weatherFetchOk = false;
 
@@ -107,15 +107,16 @@ static void weatherFetchTask(void *parameter) {
     (void)parameter;
     weatherFetchOk = fetchHourlyWeather();
     weatherFetchFinished = true;
-    weatherTaskHandle = nullptr;
+    weatherFetchRunning = false;
     vTaskDelete(nullptr);
 }
 
 static bool startWeatherFetch() {
-    if (weatherTaskHandle) return false;
+    if (weatherFetchRunning) return false;
+    weatherFetchRunning = true;
     weatherFetchFinished = false;
-    if (xTaskCreate(weatherFetchTask, "weatherFetch", 8192, nullptr, 1, &weatherTaskHandle) != pdPASS) {
-        weatherTaskHandle = nullptr;
+    if (xTaskCreate(weatherFetchTask, "weatherFetch", 8192, nullptr, 1, nullptr) != pdPASS) {
+        weatherFetchRunning = false;
         return false;
     }
     return true;
