@@ -232,8 +232,10 @@ static void handleButtonPress() {
                 } else { WiFi.disconnect(true); WiFi.mode(WIFI_OFF); }
                 break;
             case 2:
-                // BLE stack is kept alive; avoid unsafe deinit/re-init cycles.
+                // Keep the BLE host initialized; only stop/start advertising to avoid unsafe deinit cycles.
                 btPowerStatus = !btPowerStatus;
+                if (btPowerStatus) BLEDevice::startAdvertising();
+                else BLEDevice::getAdvertising()->stop();
                 break;
             case 3: currentScreen = SCREEN_SLEEP; break;
             case 4: currentScreen = SCREEN_INFO; break;
