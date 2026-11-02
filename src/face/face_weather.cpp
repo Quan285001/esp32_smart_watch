@@ -67,15 +67,16 @@ void drawWeatherFaceData(const WeatherData &w, uint8_t page) {
         }
     } else {
         header("WIND & SUN",w,3);
-        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(58,"WIND",value);
-        snprintf(value,sizeof(value),"%.1f km/h",w.windGust10/10.0f); labelValue(74,"GUST",value);
-        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(90,"DIRECTION",value);
-        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(106,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
-        snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(122,"CLOUD",value);
-        snprintf(value,sizeof(value),"%u hPa",w.pressure); labelValue(138,"PRESSURE",value);
-        labelValue(154,"SUNRISE",w.sunrise);
-        labelValue(170,"SUNSET",w.sunset);
-        labelValue(186,"MOONRISE",w.moonrise);
-        labelValue(202,"MOONSET",w.moonset);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windSpeed10/10.0f); labelValue(52,"WIND",value);
+        snprintf(value,sizeof(value),"%.1f km/h",w.windGust10/10.0f); labelValue(68,"GUST",value);
+        snprintf(value,sizeof(value),"%u deg",w.windDirection); labelValue(84,"DIRECTION",value);
+        snprintf(value,sizeof(value),"%u",w.uvIndex); labelValue(100,"UV INDEX",value,w.uvIndex>=6?RED:YELLOW);
+        snprintf(value,sizeof(value),"%u%%",w.cloudCover); labelValue(116,"CLOUD",value);
+        snprintf(value,sizeof(value),"%u hPa",w.pressure); labelValue(132,"PRESSURE",value);
+        labelValue(148,"SUNRISE",w.sunrise);
+        labelValue(164,"SUNSET",w.sunset);
+        labelValue(180,"MOONRISE",w.moonrise);
+        labelValue(196,"MOONSET",w.moonset);
+        snprintf(value,sizeof(value),"%u/100",w.moonPhase); labelValue(212,"PHASE CYCLE",value);
     }
 }
